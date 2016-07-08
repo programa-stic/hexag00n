@@ -1,0 +1,20 @@
+# Python compiled
+*.pyc
+
+# PLY
+hexagondisasm/reil/parser_HexagonParser_parsetab.py
+hexagondisasm/reil/parser.out
+
+# Setup files
+build/
+dist/
+hexagondisasm.egg-info/
+
+# Instruction sources
+inst_sources/*
+
+# BARF
+**/barf.log
+
+# Pycharm
+.idea/*
