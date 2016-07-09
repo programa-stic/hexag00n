@@ -226,13 +226,6 @@ class hexagon_processor_t(idaapi.processor_t):
         # 'seg ' prefix (example: push seg seg001)
         'a_seg': "seg",
 
-        #
-        # translation to use in character and string constants.
-        # usually 1:1, i.e. trivial translation
-        # If specified, must be 256 chars long
-        # (optional)
-        'XlatAsciiOutput': "".join([chr(x) for x in xrange(256)]),
-
         # current IP (instruction pointer) symbol in assembler
         'a_curip': "$",
 
