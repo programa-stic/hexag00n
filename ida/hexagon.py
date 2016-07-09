@@ -361,20 +361,49 @@ class hexagon_processor_t(idaapi.processor_t):
                     ua_add_cref(0, op.addr, fl_JN)
                     self.log_with_addr("ua_add_cref(0, op.addr = {:s}, fl_JN)".format(hex(op.addr)))
 
-        # Perform data cross references. As the instruction behavior is not yet analyzed,
-        # and the REIL translation is not available for now, any immediate operand is
-        # interpreted as a potential data address (provided that address is valid within
-        # the binary).
+        # Perform data cross references
+        # -----------------------------
         #
-        # For now this behavior is being commented out because is casuing IDA to try to
-        # disassemble unaligned instruction addresses.
+        # As the instruction behavior (from the manual) is not yet analyzed, and the REIL translation
+        # is also not available for now, any immediate operand is interpreted as a potential data address,
+        # and a data reference is performed, with the exceptions:
+        #
+        # 1. The immediate value is the target of a branch (that turns it into a code reference,
+        #       handled earlier in the function).
+        # 2. The immediate value does not represent a valid address within the binary.
+        #
+        # For now this feature has to be explicitly enabled with ``IDP_ENABLE_DATA_REFS`` (environ.
+        # variable) because it is causing IDA to disassemble unaligned instruction addresses (a behavior
+        # that is warned with the message ``Unaligned instruction address``).
 
-        # for imm_op in self.cmd.hi.imm_ops:
-        #     if isEnabled(imm_op.value):
-        #         ua_add_dref(0, imm_op.value, dr_R)
-        #         self.log_with_addr("ua_add_dref(0, {:s}, dr_R)".format(hex(imm_op.value)))
-        #         # TODO: Figure out what data reference to use, the safest choice is read data,
-        #         # offset references can be associated with instructions.
+        if os.getenv("IDP_ENABLE_DATA_REFS"):
+
+            for imm_op in self.cmd.hi.imm_ops:
+                # Iterate all imm. ops.
+
+                # Skip exception 1.
+
+                if self.cmd.hi.template and self.cmd.hi.template.branch:
+                    branch = self.cmd.hi.template.branch
+                    # There is a branch in the instruction.
+
+                    if branch.type in [TemplateBranch.jump_imm_syntax, TemplateBranch.call_imm_syntax]:
+                        if self.cmd.hi.get_real_operand(branch.target).value == imm_op.value:
+                            continue
+                            # The branch has an imm. op as the target, and its value is the current
+                            # imm. analyzed in this iteration.
+
+                # Skip exception 2.
+                if not isEnabled(imm_op.value):
+                    continue
+
+                # Perform the data reference.
+
+                ua_add_dref(0, imm_op.value, dr_R)
+                self.log_with_addr("ua_add_dref(0, {:s}, dr_R)".format(hex(imm_op.value)))
+                # TODO: Figure out which data reference to use (this one or `ua_add_off_drefs` like
+                # in gsmk's proc. module), the safest choice seems to be read data (`dr_R`) reference,
+                # because an offset reference can be associated with instructions.
 
         self.profiler.disable()
 
