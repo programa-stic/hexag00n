@@ -43,3 +43,5 @@ TODOs
 * Currently this translator is a sub-package (``reil``) of the disassembler python package (``hexagondisasm``). Should this be in a separate package?
 
 * Review the behavior instructions of the repository database (``hexagondisasm/data/instruction_definitions.pkl``) to check how many Hexagon behaviors have been correctly parsed from the Manual, and if that's enough for the first version of the translator.
+
+* Add PLY to the dependencies in ``setup.py``.
