@@ -6,6 +6,10 @@ defined in ``ArchitectureInformation`` (without those, an ``NotImplementedError`
 exception is raised).
 
 Todo:
+    * Should this module be named ``hexagonbase.py`` (like ``armbase.py`` in ARM)
+        instead of ``arch.py`` (which is used only for the base arch. info
+        class)?
+
     * Should constants like `ARCH_HEXAGON` be added to BARF's `arch.py`? Hexagon
         won't be fully integrated with BARF, it will use is as a library.
 
@@ -43,6 +47,10 @@ class HexagonArchitectureInformation(ArchitectureInformation):
     # TODO: How to add (these) registers to the arch. info?
 
     def __init__(self):
+        self.registers_gp_all = []
+        self.registers_gp_base = []
+        self.registers_size = []
+        # TODO: What registers should be defined?
         pass
 
     @property
@@ -51,17 +59,17 @@ class HexagonArchitectureInformation(ArchitectureInformation):
 
     @property
     def architecture_size(self):
-        raise ARCH_HEXAGON_SIZE
+        return ARCH_HEXAGON_SIZE
 
     @property
     def operand_size(self):
-        raise ARCH_HEXAGON_OPERAND_SIZE
+        return ARCH_HEXAGON_OPERAND_SIZE
 
     @property
     def address_size(self):
-        raise ARCH_HEXAGON_ADDRESS_SIZE
+        return ARCH_HEXAGON_ADDRESS_SIZE
 
     @property
     def registers(self):
         return []
-        # TODO: In ARM this returns an emṕty list and x86 doesn't seem to define it.
+        # TODO: In ARM this returns an empty list and x86 doesn't seem to define it.
