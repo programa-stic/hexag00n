@@ -66,25 +66,30 @@ To accommodate those other cases, instruction containers are used, to represent 
 Contexts of use
 ===============
 
-The translator (and the parser) will be used in two clearly different contexts: a normal (production) use, similar to BARF, where a binary is disassembled and later translated into its REIL equivalent, and a development (and testing) use, where a generic behavior (not belonging to a particular binary or disassembled instruction) is translated in isolation to REIL. It's worth differentiating between the two of them because separate process chains are being used and some considerations have to be noted that will impact on the resulting code.
+The translator (and the parser) will be used in two clearly different contexts:
 
-The **development context** permits to test any Hexagon instruction behavior (extracted from the Reference Manual and stored in the Hexag00n instruction definitions database, ``instruction_definitions.pkl``) in isolation without the need of a binary that contains such instruction, leaving aside the disassembly process. There is no ``HexagonInstruction`` object (created by the ``HexagonDisassembler``) available, the behavior pseudo-code instructions (text strings) are all that are needed.
+* *Production* (normal) use, similar to BARF, where a binary is disassembled and later translated into its REIL equivalent.
+* *Development* (and testing) use, where a template behavior (not belonging to a particular binary or disassembled instruction) is translated in isolation to REIL.
 
-The behaviors parsed in those contexts are also different (and the parser should support both). The operands (registers and immediates) in the normal context are actual operands, e.g., ``R7`` or ``#0x1008``, in the development context the operands of the behavior instructions are generic operands (like the operands in the Hexagon instructions themselves) with names that link them to the instruction encoding field names, e.g., ``Rd`` or ``#s16``. The REIL is targeted to actual operands, but the generic ones are also supported by the parser with additional lexing and parsing rules. This means being able to create REIL registers with generic names (which is not a problem since those are just strings) and also to convert generic immediates to integers with dummy values (because REIL immediates need an integer and won't accept a string like ``#s16``).
+It's worth differentiating between the two of them because separate process chains are being used and some considerations have to be noted that will have an impact on the resulting code.
+
+The **development context** permits to test any Hexagon instruction behavior (extracted from the Reference Manual and stored in the Hexag00n instruction definitions database, ``instruction_definitions.pkl``) in isolation, without the need of a binary that contains such instruction, leaving aside the disassembly process. There is no ``HexagonInstruction`` object (created by the ``HexagonDisassembler``) available, the behavior pseudo-code instructions (text strings) are all that are needed.
+
+The behaviors parsed in those contexts are also different (and the parser should support both). The operands (registers and immediates) in the production context are actual operands, e.g., ``R7`` or ``#0x1008``, whereas in the development context, the operands of the behavior instructions are template operands (like the operands in the Hexagon instructions themselves) with names that link them to the instruction encoding field names, e.g., ``Rd`` or ``#s16``. The REIL is targeted to actual operands, but the template ones are also of interest (supported by the parser with additional lexing and parsing rules). This means being able to create REIL registers with template names (which is not a problem since register names are just strings) and also to convert template immediates to integers with dummy values (because REIL immediates need an integer and won't accept a string like ``#s16``).
 
 ::
 
     Development context
     -------------------
 
-        Hexagon instruction behavior -> HexagonBehaviorParser -> REIL (generic operands)
+        Hexagon instruction behavior -> HexagonBehaviorParser -> REIL (template operands)
 
     Normal (BARF-like) context
     --------------------------
 
         Binary -> HexagonDisassembler -> HexagonInstruction
 
-        HexagonInstruction -> Replace operand names with actual values ->
+        HexagonInstruction -> Replace template operands with actual ones ->
 
             -> HexagonTranslator (translate() API) -> HexagonBehaviorParser -> REIL
 
@@ -115,3 +120,5 @@ TODOs
 * Review the behavior instructions of the repository database (``hexagondisasm/data/instruction_definitions.pkl``) to check how many Hexagon behaviors have been correctly parsed from the Manual, and if that's enough for the first version of the translator.
 
 * Add PLY to the dependencies in ``setup.py``.
+
+* Teminology: *actual* vs *template* objects, avoid using the term *generic* instead of *template*, to follow the terminology used in the disassembler (``InstructionTemplate`` vs ``HexagonInstruction``, the actual instruction).
