@@ -1,0 +1,1 @@
+from hexagontranslator import HexagonTranslator
