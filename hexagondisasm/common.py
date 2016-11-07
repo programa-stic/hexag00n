@@ -825,6 +825,10 @@ class HexagonInstruction(object):
         is_unknown (bool): True if the disassembly process fails, indicating
             that this instruction is not included in the database and therefore
             the instruction is unknown to the disassembler; False otherwise.
+        size (int): Hexagon instruction size, used by BARF (so it's needed to
+            integrate this disassembler with it). Set to the constant
+            `INST_SIZE` as there is only one possible instruction size in the
+            Hexagon architecture.
 
     TODOs:
         * Document the class, not just its attributes.
@@ -843,7 +847,7 @@ class HexagonInstruction(object):
     __slots__ = ['syntax', 'fields', 'template', 'text', 'immext',
                  'start_packet', 'end_packet',  'imm_ops', 'reg_ops',
                  'parse_bits', 'endloop', 'addr', 'packet', 'is_duplex',
-                 'is_unknown']
+                 'is_unknown', 'size']
 
     def __init__(self):
 
@@ -859,6 +863,7 @@ class HexagonInstruction(object):
         self.imm_ops = []
         self.reg_ops = []
         self.is_unknown = False
+        self.size = INST_SIZE
 
     def get_real_operand(self, template_op):
         """Get an instruction operand from the corresponding operand template of the instruction.
