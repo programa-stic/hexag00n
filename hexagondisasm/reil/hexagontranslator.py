@@ -8,7 +8,7 @@ Todo:
 
 """
 from barf.arch.translator import Translator
-from hexagondisasm.reil.parser import HexagonBehaviorParser
+from hexagondisasm.reil.behavior_parser import HexagonBehaviorParser
 from hexagondisasm.common import UnknownBehaviorException
 
 
