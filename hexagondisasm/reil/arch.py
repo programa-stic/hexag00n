@@ -19,6 +19,7 @@ Todo:
 
 """
 from barf.arch import ArchitectureInformation
+from hexagondisasm.common import TemplateBranch
 
 
 ARCH_HEXAGON = 2
@@ -73,3 +74,40 @@ class HexagonArchitectureInformation(ArchitectureInformation):
     def registers(self):
         return []
         # TODO: In ARM this returns an empty list and x86 doesn't seem to define it.
+
+    def instr_is_ret(self, instruction):
+        if instruction.template and instruction.template.branch:
+            branch = instruction.template.branch
+
+            if branch.type in [TemplateBranch.dealloc_ret_syntax]:
+                return True
+                # TODO: This is not the only ret type (only the most common), jumps to the link
+                # register should be included as well, but those are not specialized instructions,
+                # they are ``jumpr Rs`` (and the conditional variant). It should be checked for a
+                # `jump_reg_syntax` and a ``Rs`` operand set to a value or 31 (R31: LR).
+
+        return False
+
+    def instr_is_call(self, instruction):
+        if instruction.template and instruction.template.branch:
+            branch = instruction.template.branch
+
+            if branch.type in [TemplateBranch.call_reg_syntax, TemplateBranch.call_imm_syntax]:
+                return True
+
+        return False
+
+    def instr_is_halt(self, instruction):
+        return False
+
+    def instr_is_branch(self, instruction):
+        # NOTE: In the Hexagon terminology, there are only jump and calls, branch is just
+        # a generic term used to refer to both of those types. In BARF a branch is what
+        # Hexagon would refer as a jump (and only that, not including a call).
+        if instruction.template and instruction.template.branch:
+            branch = instruction.template.branch
+
+            if branch.type in [TemplateBranch.jump_reg_syntax, TemplateBranch.jump_imm_syntax]:
+                return True
+
+        return False
