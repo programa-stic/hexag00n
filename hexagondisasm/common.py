@@ -829,6 +829,8 @@ class HexagonInstruction(object):
             integrate this disassembler with it). Set to the constant
             `INST_SIZE` as there is only one possible instruction size in the
             Hexagon architecture.
+        behavior (str): similar to `text` attribute, is the text representation
+            of the behavior of the actual instruction.
 
     TODOs:
         * Document the class, not just its attributes.
@@ -847,7 +849,7 @@ class HexagonInstruction(object):
     __slots__ = ['syntax', 'fields', 'template', 'text', 'immext',
                  'start_packet', 'end_packet',  'imm_ops', 'reg_ops',
                  'parse_bits', 'endloop', 'addr', 'packet', 'is_duplex',
-                 'is_unknown', 'size']
+                 'is_unknown', 'size', 'behavior']
 
     def __init__(self):
 
@@ -855,6 +857,7 @@ class HexagonInstruction(object):
         self.fields = {}
         self.template = None
         self.text = ''
+        self.behavior = ''
         self.parse_bits = None
         self.endloop = []
         self.immext = None
