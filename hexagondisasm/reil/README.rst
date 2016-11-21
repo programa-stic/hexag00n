@@ -94,6 +94,23 @@ The behaviors parsed in those contexts are also different (and the parser should
             -> HexagonTranslator (translate() API) -> HexagonBehaviorParser -> REIL
 
 
+BARF integration
+================
+
+From the example in ``translate-reil-generic.py`` and the BARF core in ``barf.py``, the BARF translation API could be described as:
+
+::
+
+    barf.translate() ->  barf.disassemble() -> barf.disassembler.disassemble()
+
+where ``barf.disassembler`` has been set to be ``HexagonDisassembler`` (in the ``load_architecture`` call). So a ``disassembler`` method is added to ``HexagonDisassembler``, which will function just as a wrapper to the method where the actual disassembly takes place: ``disasm_one_inst``.
+
+
+that won't be addressed now, is that ``barf.disassemble()`` loads 16 bytes from the binary to disassemble in one instruction, that is enough to disassemble one Hexagon instruction (which are all 4 long).
+
+The same restriction as in the IDA applies, the disassembler has to be used in sequential order (which is the case of BARF) for the packet to be decoded correctly. Some of the IDA functionality (like the use of a ``disasm_cache`` to disassemble an entire packet at a time) could be moved to the disassembler, to be used also with BARF and any other project that would make use of it.
+
+
 TODOs
 =====
 
