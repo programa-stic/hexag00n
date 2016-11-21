@@ -449,6 +449,7 @@ class HexagonDisassembler(object):
                 # I don't care about the extension value, the final value will be shown in the next instruction.
 
         inst_text = hi.template.syntax
+        hi.behavior = hi.template.behavior
 
         # Get the immediate values and register names, and replace them in the
         # instruction syntax.
@@ -460,12 +461,39 @@ class HexagonDisassembler(object):
             inst_text = inst_text.replace(imm.template.syntax_name, repr(imm))
             # E.g., 'Rd = add(Rs, #s16)' -> 'Rd = add(Rs, 2BF4)'
 
+            # Make the same replacements for the behavior, noting that the operands
+            # have a slight variation in their syntax so they will have to be adapted
+            # (case by case) before doing the replacement.
+            #
+            # TODO: This functionality (or at least part of it) should be moved to the decoder.
+
+            if hi.behavior == '':
+                continue
+                # The behavior wasn't imported from the manual
+
+            imm_syntax = imm.template.syntax_name
+
+            # Remove immediate sizes, e.g., #r22:2 -> #r
+            imm_syntax = re.sub(r"(\#\w)\d{1,2}(:\d)?", r"\1", imm_syntax)
+
+            if imm_syntax not in hi.behavior:
+                raise UnexpectedException(
+                    "The instruction syntax for the immediate operand '{:s}'"
+                    "doesn't match the syntax of the instruction behavior '{:s}'".format(
+                        imm_syntax, hi.behavior,
+                    )
+                )
+
+            hi.behavior = hi.behavior.replace(imm_syntax, repr(imm))
+
         for reg in hi.reg_ops:
             self.fill_in_reg_info(reg, hi)
 
             inst_text = inst_text.replace(reg.template.syntax_name, reg.name)
             # E.g., 'Rd = add(Rs, 2BF4)' -> 'R8 = add(Rs, 2BF4)'  (first iteration)
             #       'R8 = add(Rs, 2BF4)' -> 'R8 = add(R17, 2BF4)' (second iteration)
+
+            hi.behavior = hi.behavior.replace(reg.template.syntax_name, reg.name)
 
         inst_text = inst_text.lower()
         # Like objdump.
