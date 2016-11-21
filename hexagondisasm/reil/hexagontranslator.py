@@ -21,7 +21,7 @@ class HexagonTranslator(Translator):
         """Return IR representation of an instruction.
         """
 
-        parser = HexagonBehaviorParser(debug=False)
+        parser = HexagonBehaviorParser(debug=True)
 
         if instruction.template is None:
             # TODO: In which cases the template is None?
@@ -36,12 +36,14 @@ class HexagonTranslator(Translator):
 
         try:
             print("Parsing: {:s}".format(behavior.strip()))
-            parsed = parser.parse(behavior)
+            parsed = parser.parse_and_translate(behavior)
             for ri in parsed._instructions:
                 print(ri)
             print("DONE!")
+            return parsed._instructions
         except UnknownBehaviorException as e:
-            # log.info("Unknown behavior instruction: {:s}".format(behavior))
+            print("Unknown behavior instruction: {:s}".format(behavior))
+            print(e)
             pass
 
 

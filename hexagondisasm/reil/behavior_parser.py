@@ -1,8 +1,10 @@
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
+# TODO: Removed int import because the newint type is not compatible with
+# what BARF uses for REIL immediate operands.
 from builtins import (ascii, bytes, chr, dict, filter, hex, input,
-                      int, map, next, oct, open, pow, range, round,
+                      map, next, oct, open, pow, range, round,
                       str, super, zip)
 
 import os
@@ -20,6 +22,8 @@ from barf.arch.translator import TranslationBuilder
 from barf.core.reil.reil import ReilRegisterOperand, ReilImmediateOperand
 from barf.utils.utils import VariableNamer
 # from barf.core.reil import ReilMnemonic
+from barf.core.reil import ReilInstructionBuilder
+from barf.core.reil import ReilImmediateOperand
 
 
 hexagon_size = 32
@@ -30,13 +34,20 @@ _ir_name_generator = VariableNamer("t", separator="")
 # TODO: Used by the HexagonTranslationBuilder, is kept as a global variable for now,
 # later it should be added to the HexagonTranslator (like BARF).
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    stream=sys.stdout,
-    format="%(filename)10s:%(lineno)4d: %(message)s"
-)
-log = logging.getLogger()
-# TODO: Add the logger to the HexagonBehaviorParser class?
+# Used example from https://docs.python.org/2/howto/logging.html#configuring-logging
+# because the basicConfig option was clasing with BARF's log (somehow).
+# create log
+log = logging.getLogger('yacc_log')
+log.setLevel(logging.ERROR)
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+# create formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# add formatter to ch
+ch.setFormatter(formatter)
+# add ch to log
+log.addHandler(ch)
 
 
 class Parser(object):
@@ -61,36 +72,11 @@ class Parser(object):
         self.debugfile = modname + ".dbg"
 
         # Build the lexer and parser
-        lex.lex(module=self, debug=False, debuglog=log)
+        lex.lex(module=self, debug=False)
         yacc.yacc(module=self,
                   debug=self.debug,
                   debugfile=self.debugfile,
                   tabmodule=self.tabmodule)
-
-    def parse(self, input):
-        """Parse input text with rules defined in the child class
-        (`HexagonBehaviorParser`).
-
-        Args:
-            input (str): Input text to parse.
-
-        Returns:
-            List[ReilInstruction]: Equivalent REIL instructions.
-
-        Raises:
-            UnknownBehaviorException: If the rules define can't process the input text.
-
-        TODOs:
-            * Define return type.
-
-            * Decouple base and child classes, or document it appropriately.
-
-            * Return the instruction lists of the TranslationBuilder object, not the object itself.
-
-        """
-        # return yacc.parse(input, debug=self.debug)
-
-        return yacc.parse(input, debug = log if self.debug else False)
 
 
 class HexagonBehaviorParser(Parser):
@@ -102,6 +88,22 @@ class HexagonBehaviorParser(Parser):
     def __init__(self, **kw):
         super(HexagonBehaviorParser, self).__init__(**kw)
 
+        self._sp = ReilRegisterOperand("r29", 32)  # TODO: Implement alias
+        self._fp = ReilRegisterOperand("r30", 32)  # TODO: Implement alias
+        self._lr = ReilRegisterOperand("r31", 32)
+        self._pc = ReilRegisterOperand("PC", 32)
+
+        self._pc_modified = False
+        # Used in jump/calls: behavior instructions don't perform branches,
+        # only modify the PC, the branch has to be added externally to the
+        # parsing process.
+
+        self._ws = ReilImmediateOperand(4, 32)  # word size
+
+        self._tb = HexagonTranslationBuilder(_ir_name_generator)
+
+        self._builder = ReilInstructionBuilder()
+
     # Lexer rules.
     # ------------
 
@@ -111,7 +113,7 @@ class HexagonBehaviorParser(Parser):
     }
 
     tokens = [
-         'REG', 'IMM', 'NAME', 'IMM_OP', 'MEM_ACCESS', 'REG_EA',
+         'REG', 'IMM', 'IMM_REG', 'CONS', 'NAME', 'IMM_OP', 'MEM_ACCESS', 'REG_EA', 'REG_SP', 'REG_FP', 'REG_LR',
 
          # Literals (identifier, integer constant, float constant, string constant, char const)
          'ID', 'TYPEID', 'ICONST', 'FCONST', 'SCONST', 'CCONST',
@@ -119,7 +121,7 @@ class HexagonBehaviorParser(Parser):
          # Operators (+,-,*,/,%,|,&,~,^,<<,>>, ||, &&, !, <, <=, >, >=, ==, !=)
          'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MOD',
          'OR', 'AND', 'NOT', 'XOR', 'LSHIFT', 'RSHIFT',
-         'LOR', 'LAND', 'LOG_NOT',
+         'LOR', 'LAND', 'NEGATE',
          'LT', 'LE', 'GT', 'GE', 'EQ', 'NE',
 
          # Assignment (=, *=, /=, %=, +=, -=, <<=, >>=, &=, ^=, |=)
@@ -161,7 +163,7 @@ class HexagonBehaviorParser(Parser):
     t_AND = r'&'
     t_NOT = r'!'
     t_XOR = r'\^'
-    t_LOG_NOT = r'~'
+    t_NEGATE = r'~'
     t_LSHIFT = r'<<'
     t_RSHIFT = r'>>'
     t_LT = r'<'
@@ -227,27 +229,48 @@ class HexagonBehaviorParser(Parser):
         # TODO: this is taken from the decoder, should be unified.
         return t
 
-    def t_IMM(self, t):
+    # Immediate operands (e.g., '#u22:2') are treated like special registers
+    # because the behavior sometimes modifies their value (e.g., Jump:
+    # ``#r=#r & ~0x3;``).
+    def t_IMM_REG(self, t):
+        r'\#[usmr]'
+        # TODO: this is taken from the common module ('match_immediate_char_in_syntax'),
+        # should be unified.
+        return t
+
+    def t_REG_SP(self, t):
+        r'SP'
+        return t
+
+    def t_REG_FP(self, t):
+        r'FP'
+        return t
+
+    def t_REG_LR(self, t):
+        r'LR'
+        return t
+
+    def t_CONS(self, t):
         r'(0x)?[a-fA-F0-9]+'
+        base = 16 if '0x' in t.value else 10
         t.value = re.sub('0x', '', t.value)
-        t.value = int(t.value, 16)
-        # TODO: Is it always hexadecimal format?
+        t.value = int(t.value, base)
         return t
 
     # Parser rules.
     # ------------
 
     precedence = (
-        # ('nonassoc', 'SEMI'),
-        # ('nonassoc','TIMESEQUAL','DIVEQUAL','PLUSEQUAL','MINUSEQUAL','LSHIFTEQUAL','RSHIFTEQUAL','ANDEQUAL','OREQUAL','XOREQUAL'),
-        # ('nonassoc', 'NOT', 'OR', 'AND', 'XOR'),
-        # ('nonassoc', 'EQ', 'NE',),
-        # ('nonassoc', 'LT', 'GT', 'LE', 'GE',),
-        # ('left','PLUS','MINUS'),
-        # ('left','TIMES','DIVIDE'),
-        # ('right', 'UNARY_OPERATOR'),
+        ('nonassoc', 'SEMI'),
+        ('nonassoc','TIMESEQUAL','DIVEQUAL','PLUSEQUAL','MINUSEQUAL','LSHIFTEQUAL','RSHIFTEQUAL','ANDEQUAL','OREQUAL','XOREQUAL'),
+        ('nonassoc', 'NOT', 'OR', 'AND', 'XOR'),
+        ('nonassoc', 'EQ', 'NE',),
+        ('nonassoc', 'LT', 'GT', 'LE', 'GE',),
+        ('left','PLUS','MINUS'),
+        ('left','TIMES','DIVIDE'),
+        ('right', 'UNARY_OPERATOR'),
         # ('left', 'UNARY_OPERATOR_LEFT'),
-        # ('nonassoc', 'LPAREN', 'RPAREN', 'LBRACE', 'RBRACE'),
+        ('nonassoc', 'LPAREN', 'RPAREN', 'LBRACE', 'RBRACE'),
     )
 
     def p_statement_expr(self, p):
@@ -275,10 +298,22 @@ class HexagonBehaviorParser(Parser):
         p[0] = p[1]
 
     def p_register_reg(self, p):
-        "register : REG"
+        '''register : REG
+                    | IMM_REG
+                    | REG_SP
+                    | REG_FP
+                    | REG_LR
+                    | REG_EA
+                    | MEM_ACCESS'''
         p[0] = HexagonTranslationBuilder(_ir_name_generator)
         p[0].set_value(ReilRegisterOperand(p[1], hexagon_size))
         print_debug("Create REIL register: {:s}".format(p[1]))
+
+    def p_expression_cons(self, p):
+        "expression : CONS"
+        p[0] = HexagonTranslationBuilder(_ir_name_generator)
+        p[0].set_value(ReilImmediateOperand(p[1], hexagon_size))
+        # print("Create reil imm: {:x}".format(p[1]))
 
     def p_statementassign(self, p):
         '''statement_assign : register EQUALS        expression
@@ -297,6 +332,16 @@ class HexagonBehaviorParser(Parser):
         p[0] = p[3]
         print_debug("assign {:s} -> {:s}".format(p[3].get_value(), p[1].get_value()))
 
+    def p_expr_uminus(self, p):
+        'expression : MINUS expression %prec UNARY_OPERATOR'
+        # p[0] = -p[2]
+        p[0] = p[2]
+
+    def p_expr_unegate(self, p):
+        'expression : NEGATE expression %prec UNARY_OPERATOR'
+        # p[0] = -p[2]
+        p[0] = p[2]
+
     def p_expression_binop(self, p):
         '''expression : expression PLUS expression
                       | expression MINUS expression
@@ -306,7 +351,6 @@ class HexagonBehaviorParser(Parser):
                       | expression AND expression
                       | expression NOT expression
                       | expression XOR expression
-                      | expression LOG_NOT expression
                       | expression LSHIFT expression
                       | expression RSHIFT expression
                       | expression LT expression
@@ -327,12 +371,72 @@ class HexagonBehaviorParser(Parser):
         inst = "binop {:s} {:s} {:s}".format(p[1].get_value(), p[2], p[3].get_value())
         print_debug(inst)
 
+    def p_expression_group(self, p):
+        "expression : LPAREN expression RPAREN"
+        p[0] = p[2]
+
     def p_error(self, p):
         if p:
             error_msg = "Syntax error at {:s}".format(str(p.value))
         else:
             error_msg = "Syntax error at EOF"
         raise UnknownBehaviorException(error_msg)
+
+    def parse_and_translate(self, input):
+        """Parse input text with rules defined in the child class
+        (`HexagonBehaviorParser`).
+
+        Args:
+            input (str): Input text to parse.
+
+        Returns:
+            List[ReilInstruction]: Equivalent REIL instructions.
+
+        Raises:
+            UnknownBehaviorException: If the rules define can't process the input text.
+
+        TODOs:
+            * Define return type.
+
+            * Decouple base and child classes, or document it appropriately.
+
+            * Return the instruction lists of the TranslationBuilder object, not the object itself.
+
+        """
+        # return yacc.parse(input, debug=self.debug)
+
+
+        # TODO: Temporal hack to eliminate apply_extension until it's decided what to do.
+        # print("before: " + input)
+        input = re.sub(r'apply_extension\(.*?\);?', r'', input)
+        # print("after: " + input)
+
+        reil_translated = yacc.parse(input, debug = log)
+
+        # TODO: How to signal PC modification? As to not call it every time
+        self._branch_to_pc(reil_translated)
+
+        return reil_translated
+
+    def _branch_to_pc(self, tb, link=False):
+        target = self._pc
+        target = tb._and_regs(target, ReilImmediateOperand(0xFFFFFFFE, target.size))
+
+        tmp0 = tb.temporal(target.size + 8)
+        tmp1 = tb.temporal(target.size + 8)
+
+        tb.add(self._builder.gen_str(target, tmp0))
+        tb.add(self._builder.gen_bsh(tmp0, ReilImmediateOperand(8, target.size + 8), tmp1))
+
+        target = tmp1
+
+        # if link:
+        #     tb.add(self._builder.gen_str(ReilImmediateOperand(instruction.address + instruction.size, self._pc.size),
+        #                                  self._lr))
+
+        tb._jump_to(target)
+
+        return
 
 
 class HexagonTranslationBuilder(TranslationBuilder):
@@ -411,5 +515,5 @@ if __name__ == "__main__":
                 print(ri)
             print_debug("DONE!")
         except UnknownBehaviorException as e:
-            # log.info("Unknown behavior instruction: {:s}".format(behavior))
+            log.info("Unknown behavior instruction: {:s}".format(behavior))
             pass
