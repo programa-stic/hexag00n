@@ -2,8 +2,9 @@
 *.pyc
 
 # PLY
-hexagondisasm/reil/parser_HexagonParser_parsetab.py
-hexagondisasm/reil/parser.out
+hexagondisasm/reil/behavior_parser_HexagonBehaviorParser.dbg
+hexagondisasm/reil/behavior_parser_HexagonBehaviorParser_parsetab.py
+
 
 # Setup files
 build/
