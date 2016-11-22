@@ -893,6 +893,11 @@ class HexagonInstruction(object):
         return []
         # TODO: The immediate and register operands should be converted (somehow) to BARF needed types.
 
+    @property
+    def prefix(self):
+        """Added for the BARF API."""
+        return ""
+
     def get_real_operand(self, template_op):
         """Get an instruction operand from the corresponding operand template of the instruction.
 
