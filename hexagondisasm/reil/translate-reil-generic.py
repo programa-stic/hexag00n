@@ -18,7 +18,6 @@ if __name__ == "__main__":
         # filename = sys.argv[1]
         filename = r"../data/factorial_example.elf"
 
-        arch_mode = ARCH_X86_MODE_32
         arch_info = HexagonArchitectureInformation()
 
         disassembler = HexagonDisassembler()
@@ -27,7 +26,7 @@ if __name__ == "__main__":
 
         barf = BARF(filename)
 
-        barf.load_architecture("x86", arch_info, disassembler, translator)
+        barf.load_architecture("hexagon", arch_info, disassembler, translator)
 
     except Exception as err:
         print "[-] Error opening file : %s" % filename
@@ -55,7 +54,7 @@ if __name__ == "__main__":
     print(barf.binary.architecture_mode)
 
     # Recover CFG.
-    cfg = barf.recover_cfg(ea_start, ea_end)
+    cfg = barf.recover_cfg(ea_start=ea_start, ea_end=ea_end)
 
     # Save CFG to a .dot file.
     cfg.save("main_cfg")
