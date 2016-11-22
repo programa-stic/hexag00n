@@ -868,6 +868,15 @@ class HexagonInstruction(object):
         self.is_unknown = False
         self.size = INST_SIZE
 
+    @property
+    def address(self):
+        """Added for the REIL API, the address belongs to the Hexagon packet, not the instruction."""
+        if self.packet:
+            return self.packet.address
+
+        return 0
+        # TODO: Log this case, can an instruction exist without a packet?
+
     def get_real_operand(self, template_op):
         """Get an instruction operand from the corresponding operand template of the instruction.
 
