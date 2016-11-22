@@ -18,6 +18,9 @@ from hexagondisasm.common import extract_bits, INST_SIZE
 from hexagondisasm.reil.arch import ARCH_HEXAGON_MODE
 # TODO: The disassembler is importing from REIL, this dependency should be avoided.
 
+from barf.core.disassembler import DisassemblerError
+# TODO: The disassembler is importing from BARF (only the REIL submodule should).
+
 class HexagonDisassembler(object):
     """Hexagon disassembler.
 
@@ -752,7 +755,8 @@ class HexagonDisassembler(object):
         # BARF will pass at most 16 bytes of data, and it is assumed that at least
         # 4 bytes (the length of an Hexagon instruction) will be passed.
         if len(data) < 4:
-            raise UnexpectedException("BARF called the disassemble function with less than 4 bytes.")
+            raise DisassemblerError("BARF called the disassemble function with less than 4 bytes.")
+            # TODO: Is this the correct way to stop the disassembly process in BARF's _disassemble_bb().
 
         # The 4 bytes are reconstructed in an int representing the instruction bits,
         # which is what disasm_one_inst is expecting. The current function aims to
