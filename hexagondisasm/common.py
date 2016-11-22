@@ -877,6 +877,16 @@ class HexagonInstruction(object):
         return 0
         # TODO: Log this case, can an instruction exist without a packet?
 
+    @property
+    def mnemonic(self):
+        """Added for the REIL API, Hexagon doesn't formally define instruction mnemonics."""
+        if self.syntax:
+            return str(self.syntax)
+            # Closest to a mnemonic is the syntax itself.
+
+        return str("NO_MNEM")
+        # TODO: In which cases there is no syntax defined? (e.g., immedate extensions).
+
     def get_real_operand(self, template_op):
         """Get an instruction operand from the corresponding operand template of the instruction.
 
