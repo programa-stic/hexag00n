@@ -870,7 +870,7 @@ class HexagonInstruction(object):
 
     @property
     def address(self):
-        """Added for the REIL API, the address belongs to the Hexagon packet, not the instruction."""
+        """Added for the BARF API, the address belongs to the Hexagon packet, not the instruction."""
         if self.packet:
             return self.packet.address
 
@@ -879,13 +879,19 @@ class HexagonInstruction(object):
 
     @property
     def mnemonic(self):
-        """Added for the REIL API, Hexagon doesn't formally define instruction mnemonics."""
+        """Added for the BARF API, Hexagon doesn't formally define instruction mnemonics."""
         if self.syntax:
             return str(self.syntax)
             # Closest to a mnemonic is the syntax itself.
 
         return str("NO_MNEM")
         # TODO: In which cases there is no syntax defined? (e.g., immedate extensions).
+
+    @property
+    def operands(self):
+        """Added for the BARF API."""
+        return []
+        # TODO: The immediate and register operands should be converted (somehow) to BARF needed types.
 
     def get_real_operand(self, template_op):
         """Get an instruction operand from the corresponding operand template of the instruction.
