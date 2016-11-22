@@ -880,8 +880,11 @@ class HexagonInstruction(object):
     @property
     def mnemonic(self):
         """Added for the BARF API, Hexagon doesn't formally define instruction mnemonics."""
-        if self.syntax:
-            return str(self.syntax)
+        if self.text != '':
+            return self.text
+
+        if self.template and self.template.syntax:
+            return str(self.template.syntax)
             # Closest to a mnemonic is the syntax itself.
 
         return str("NO_MNEM")
