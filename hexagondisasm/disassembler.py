@@ -15,6 +15,8 @@ from hexagondisasm.common import ImmediateTemplate, RegisterTemplate
 from hexagondisasm.common import UnexpectedException, UnknownInstructionException
 from hexagondisasm.common import extract_bits, INST_SIZE
 
+from hexagondisasm.reil.arch import ARCH_HEXAGON_MODE
+# TODO: The disassembler is importing from REIL, this dependency should be avoided.
 
 class HexagonDisassembler(object):
     """Hexagon disassembler.
@@ -727,7 +729,7 @@ class HexagonDisassembler(object):
 
         return extracted_value
 
-    def disassemble(self, data, address, architecture_mode):
+    def disassemble(self, data, address, architecture_mode=ARCH_HEXAGON_MODE):
         """BARF: Disassemble raw bytes into an instruction.
 
         This function is added to comply with BARF's API that calls
