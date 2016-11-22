@@ -111,3 +111,10 @@ class HexagonArchitectureInformation(ArchitectureInformation):
                 return True
 
         return False
+
+    @property
+    def max_instruction_size(self):
+        """Return the maximum instruction size in bytes.
+        """
+        return 4
+        # TODO: How is this function used? Should this better return the size of a packet? (16 bytes)
