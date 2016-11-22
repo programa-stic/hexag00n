@@ -118,3 +118,12 @@ class HexagonArchitectureInformation(ArchitectureInformation):
         """
         return 4
         # TODO: How is this function used? Should this better return the size of a packet? (16 bytes)
+
+
+    def instr_is_branch_cond(self, instruction):
+        if instruction.template and instruction.template.branch:
+            branch = instruction.template.branch
+
+            return branch.is_conditional
+
+        return False
