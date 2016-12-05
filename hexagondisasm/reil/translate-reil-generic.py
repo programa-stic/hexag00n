@@ -2,6 +2,7 @@ import os
 import sys
 import traceback
 
+from barf.analysis.basicblock.callgraph import CallGraph
 from barf.arch.arch import ARCH_X86_MODE_32
 from barf.barf import BARF
 
@@ -58,3 +59,88 @@ if __name__ == "__main__":
 
     # Save CFG to a .dot file.
     cfg.save("main_cfg")
+
+    # Recover CFGs.
+    print("[+] Recovering CFGs...")
+
+    entries = [ea_start]
+    symbols_by_addr ={}
+
+    cfgs = barf.recover_cfg_all(entries, symbols=symbols_by_addr)
+
+    # Recover CG.
+    print("[+] Recovering program CG...")
+
+    cfgs_filtered = []
+    for cfg in cfgs:
+        if len(cfg.basic_blocks) == 0:
+            print("[*] Ignoring empty CFG: {}".format(cfg.name))
+            continue
+
+        cfgs_filtered.append(cfg)
+
+    cg = CallGraph(cfgs_filtered)
+
+
+
+
+    # reil_emulator = barf.ir_emulator
+    # c_analyzer = barf.code_analyzer
+    #
+    # # Setting parameters.
+    # # ==================================================================== #
+    # print("[+] Setting parameters...")
+    #
+    # esp = 0x00001500
+    #
+    # in_array_addr = 0x4093a8
+    # out_array_addr = esp - 0x25
+    # array_size = 32
+    #
+    # # Push parameters into the stack.
+    # reil_emulator.write_memory(esp + 0x00, 4, 0x41414141) # return address
+    # reil_emulator.write_memory(esp + 0x04, 4, 0x12345678) # x
+    # reil_emulator.write_memory(esp + 0x08, 4, 0x87654321) # y
+    #
+    # # # Print stack.
+    # # ==================================================================== #
+    # # print("[+] Printing stack content... ")
+    #
+    # # __print_stack(esp)
+    #
+    # # Taint parameters.
+    # # ==================================================================== #
+    # print("[+] Tainting parameters...")
+    #
+    # # Taint in array and parameters.
+    # reil_emulator.set_memory_taint(in_array_addr, array_size, True)
+    # reil_emulator.set_memory_taint(esp + 0x04, 4, True) # x
+    # reil_emulator.set_memory_taint(esp + 0x08, 4, True) # y
+    #
+    # # Generate trace.
+    # # ==================================================================== #
+    # print("[+] Generating trace...")
+    #
+    # # Hook instructions in order to record execution trace.
+    # trace = []
+    #
+    # reil_emulator.set_instruction_post_handler(__instr_post, trace)
+    #
+    # # Set registers.
+    # ctx_init = {
+    #     'registers' : {
+    #         # Set eflags and stack pointer.
+    #         'eflags' : 0x202,
+    #         'esp'    : esp,
+    #     }
+    # }
+    #
+    # # Emulate code.
+    # _ = barf.emulate_full(ctx_init, 0x004010ec, 0x0040111d)
+    #
+    # # Save trace to a file.
+    # # ==================================================================== #
+    # print("[+] Saving trace...")
+    #
+    # __save_trace(trace, "trace.log")
+    #
