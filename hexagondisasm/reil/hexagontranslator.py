@@ -8,6 +8,9 @@ Todo:
 
 """
 from barf.arch.translator import Translator
+from barf.core.reil import ReilInstruction
+from barf.core.reil import ReilMnemonic
+
 from hexagondisasm.reil.behavior_parser import HexagonBehaviorParser
 from hexagondisasm.common import UnknownBehaviorException
 
@@ -20,6 +23,10 @@ class HexagonTranslator(Translator):
     def translate(self, instruction):
         """Return IR representation of an instruction.
         """
+
+        ins = ReilInstruction()
+        ins.mnemonic = ReilMnemonic.UNKN
+        return [ins]
 
         parser = HexagonBehaviorParser(debug=True)
 
