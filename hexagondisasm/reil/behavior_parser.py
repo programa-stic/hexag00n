@@ -16,6 +16,8 @@ import ply.yacc as yacc
 
 from hexagondisasm import common
 from hexagondisasm.common import UnknownBehaviorException, UnexpectedException
+from hexagondisasm.reil.behavior_ast import *
+# TODO fix import *
 
 # BARF imports
 from barf.arch.translator import TranslationBuilder
@@ -305,12 +307,16 @@ class HexagonBehaviorParser(Parser):
                     | REG_LR
                     | REG_EA
                     | MEM_ACCESS'''
+        p[0] = p[1]
+        return
         p[0] = HexagonTranslationBuilder(_ir_name_generator)
         p[0].set_value(ReilRegisterOperand(p[1], hexagon_size))
         print_debug("Create REIL register: {:s}".format(p[1]))
 
     def p_expression_cons(self, p):
         "expression : CONS"
+        p[0] = p[1]
+        return
         p[0] = HexagonTranslationBuilder(_ir_name_generator)
         p[0].set_value(ReilImmediateOperand(p[1], hexagon_size))
         # print("Create reil imm: {:x}".format(p[1]))
@@ -327,6 +333,8 @@ class HexagonBehaviorParser(Parser):
                             | register OREQUAL       expression
                             | register XOREQUAL       expression'''
 
+        p[0] = Assignment(p[1], p[2], p[3])
+        return
         p[3].add(p[3]._builder.gen_str(p[3].get_value(), p[1].get_value()))
         p[3].set_value(p[1])
         p[0] = p[3]
@@ -359,10 +367,8 @@ class HexagonBehaviorParser(Parser):
                       | expression GE expression
                       | expression EQ expression
                       | expression NE expression'''
-        #     if p[2] == '+'  : p[0] = p[1] + p[3]
-        #     elif p[2] == '-': p[0] = p[1] - p[3]
-        #     elif p[2] == '*': p[0] = p[1] * p[3]
-        #     elif p[2] == '/': p[0] = p[1] / p[3]
+        p[0] = BinOp(p[1], p[2], p[3])
+        return
         p[1].extend_instructions(p[3])
         binop_dst = p[1].temporal(hexagon_size)
         p[1].add(p[1]._builder.gen_add(p[1].get_value(), p[3].get_value(), binop_dst))
@@ -414,7 +420,7 @@ class HexagonBehaviorParser(Parser):
         reil_translated = yacc.parse(input, debug = log)
 
         # TODO: How to signal PC modification? As to not call it every time
-        self._branch_to_pc(reil_translated)
+        # self._branch_to_pc(reil_translated)
 
         return reil_translated
 
@@ -510,9 +516,8 @@ if __name__ == "__main__":
 
         try:
             print_debug("Parsing: {:s}".format(inst.behavior.strip()))
-            parsed = parser.parse(behavior)
-            for ri in parsed._instructions:
-                print(ri)
+            parsed = parser.parse_and_translate(behavior)
+            print(parsed)
             print_debug("DONE!")
         except UnknownBehaviorException as e:
             log.info("Unknown behavior instruction: {:s}".format(behavior))
