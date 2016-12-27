@@ -83,6 +83,7 @@ if __name__ == "__main__":
 
     cg = CallGraph(cfgs_filtered)
 
+    print("[+] Saving CG to disk...")
     cg.save("main_cg")
 
     pass
