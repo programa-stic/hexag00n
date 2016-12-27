@@ -64,7 +64,9 @@ if __name__ == "__main__":
     print("[+] Recovering CFGs...")
 
     entries = [ea_start]
-    symbols_by_addr ={}
+    symbols_by_addr ={
+        0x00005120: ("main", 0x000051D8-0x00005120, True)
+    }
 
     cfgs = barf.recover_cfg_all(entries, symbols=symbols_by_addr)
 
@@ -80,6 +82,10 @@ if __name__ == "__main__":
         cfgs_filtered.append(cfg)
 
     cg = CallGraph(cfgs_filtered)
+
+    cg.save("main_cg")
+
+    pass
 
 
 
