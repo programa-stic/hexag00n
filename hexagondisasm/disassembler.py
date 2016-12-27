@@ -6,7 +6,6 @@ from builtins import (ascii, bytes, chr, dict, filter, hex, input,
                       str, super, zip)
 
 import re
-import struct
 
 from hexagondisasm import common
 from hexagondisasm.common import HexagonInstruction, HexagonPacket
@@ -15,11 +14,6 @@ from hexagondisasm.common import ImmediateTemplate, RegisterTemplate
 from hexagondisasm.common import UnexpectedException, UnknownInstructionException
 from hexagondisasm.common import extract_bits, INST_SIZE
 
-from hexagondisasm.reil.arch import ARCH_HEXAGON_MODE
-# TODO: The disassembler is importing from REIL, this dependency should be avoided.
-
-from barf.core.disassembler import DisassemblerError
-# TODO: The disassembler is importing from BARF (only the REIL submodule should).
 
 class HexagonDisassembler(object):
     """Hexagon disassembler.
@@ -731,40 +725,6 @@ class HexagonDisassembler(object):
                 # TODO: Use set_bit and clear_bit functions.
 
         return extracted_value
-
-    def disassemble(self, data, address, architecture_mode=ARCH_HEXAGON_MODE):
-        """BARF: Disassemble raw bytes into an instruction.
-
-        This function is added to comply with BARF's API that calls
-        the `disassemble` function from its loaded disassembler (which will be
-        `HexagonDisassembler` in this case).
-
-        Args:
-            data (str): Raw bytes (extracted from a binary file) that represent
-                one or possibly more instructions.
-            address (int): Starting address of the data (raw bytes), which will
-                be the address of the disassembled instruction.
-            architecture_mode (int): Used in BARF to indicate variations of the
-                same architecture, it's not used here.
-
-        Returns:
-            HexagonInstruction: disassembled instruction.
-
-        """
-
-        # BARF will pass at most 16 bytes of data, and it is assumed that at least
-        # 4 bytes (the length of an Hexagon instruction) will be passed.
-        if len(data) < 4:
-            raise DisassemblerError("BARF called the disassemble function with less than 4 bytes.")
-            # TODO: Is this the correct way to stop the disassembly process in BARF's _disassemble_bb().
-
-        # The 4 bytes are reconstructed in an int representing the instruction bits,
-        # which is what disasm_one_inst is expecting. The current function aims to
-        # modify the existing code as little as possible.
-        inst_as_int = struct.unpack('<I', data[0:4])[0]
-
-        return self.disasm_one_inst(inst_as_int, address)
-
 
     def disasm_one_inst(self, inst, addr = 0):
         """Disassemble one instruction value interpreted as an unsigned int.

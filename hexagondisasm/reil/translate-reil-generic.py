@@ -7,7 +7,7 @@ from barf.arch.arch import ARCH_X86_MODE_32
 from barf.barf import BARF
 
 from hexagontranslator import HexagonTranslator
-from hexagondisasm.disassembler import HexagonDisassembler
+from hexagondisasm.reil.barf_disassembler import BARFHexagonDisassembler
 from arch import HexagonArchitectureInformation
 
 if __name__ == "__main__":
@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
         arch_info = HexagonArchitectureInformation()
 
-        disassembler = HexagonDisassembler()
+        disassembler = BARFHexagonDisassembler()
 
         translator = HexagonTranslator()
 
