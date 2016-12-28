@@ -68,3 +68,45 @@ class MemSave(Node):
 
     def __repr__(self):
         return "(MemSave: {:s} ({:s}))".format(self.src, self.size)
+
+class Statement(Node):
+    # TODO: This is actually a (possibly) list of statements, not a single
+    # one, should this distinction be made?
+    # TODO: Should this list actually be structured in a tree, with multiple
+    # Statement objects?
+    __slots__ = ['sl'] # statement list
+    def __init__(self, sl):
+        self.sl = sl
+
+    def __repr__(self):
+        ret_str = "(Statement:"
+        for s in self.sl:
+            ret_str += "\n\t{:s}".format(s)
+        ret_str += "\n)"
+        # TODO: list comprehension
+
+        return ret_str
+
+
+class IfConditional(Node):
+    __slots__ = ['if_block', 'condition', 'else_block']
+    def __init__(self, condition, if_block, else_block = ""):
+        # TODO: Empty string, or create an empty node class?
+        self.if_block = if_block
+        self.condition = condition
+        self.else_block = else_block
+
+    def __repr__(self):
+        return "(IF {:s} THEN {:s} ELSE {:s}".format(self.condition, self.if_block, self.else_block)
+
+
+class RegAccesor(Node):
+    __slots__ = ['reg', 'index', 'else_block']
+    def __init__(self, condition, if_block, else_block = ""):
+        # TODO: Empty string, or create an empty node class?
+        self.if_block = if_block
+        self.condition = condition
+        self.else_block = else_block
+
+    def __repr__(self):
+        return "(IF {:s} THEN {:s} ELSE {:s}".format(self.condition, self.if_block, self.else_block)

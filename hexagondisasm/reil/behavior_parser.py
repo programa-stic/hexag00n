@@ -39,11 +39,12 @@ _ir_name_generator = VariableNamer("t", separator="")
 # Used example from https://docs.python.org/2/howto/logging.html#configuring-logging
 # because the basicConfig option was clasing with BARF's log (somehow).
 # create log
+log_level = logging.ERROR
 log = logging.getLogger('yacc_log')
-log.setLevel(logging.ERROR)
+log.setLevel(log_level)
 # create console handler and set level to debug
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(log_level)
 # create formatter
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 # add formatter to ch
@@ -74,7 +75,7 @@ class Parser(object):
         self.debugfile = modname + ".dbg"
 
         # Build the lexer and parser
-        lex.lex(module=self, debug=False)
+        lex.lex(module=self, debug=self.debug)
         yacc.yacc(module=self,
                   debug=self.debug,
                   debugfile=self.debugfile,
@@ -197,6 +198,8 @@ class HexagonBehaviorParser(Parser):
     # Delimeters
     t_LPAREN = r'\('
     t_RPAREN = r'\)'
+    t_LBRACKET = r'\['
+    t_RBRACKET = r'\]'
     t_LBRACE = r'\{'
     t_RBRACE = r'\}'
     t_COMMA = r','
@@ -219,12 +222,6 @@ class HexagonBehaviorParser(Parser):
     def t_REG_EA(self, t):
         r'EA'
         return t
-
-    # TODO: Wait to use this definition until necessary.
-    # def t_NAME(self, t):
-    #     r'[a-zA-Z_][a-zA-Z0-9_]*'
-    #     t.type = HexagonBehaviorParser.reserved.get(t.value, 'NAME')    # Check for reserved words
-    #     return t
 
     def t_REG(self, t):
         r'[RPNMC]\w{1,2}(\.new)?'
@@ -254,10 +251,19 @@ class HexagonBehaviorParser(Parser):
 
     def t_CONS(self, t):
         r'(0x)?[a-fA-F0-9]+'
+        return
+        # Perform conversion in the translation?
         base = 16 if '0x' in t.value else 10
         t.value = re.sub('0x', '', t.value)
         t.value = int(t.value, base)
         return t
+
+    # TODO: Wait to use this definition until necessary.
+    def t_NAME(self, t):
+        r'[a-zA-Z_][a-zA-Z0-9_]*'
+        t.type = HexagonBehaviorParser.reserved.get(t.value, 'NAME')    # Check for reserved words
+        return t
+
 
     # Parser rules.
     # ------------
@@ -277,12 +283,14 @@ class HexagonBehaviorParser(Parser):
 
     def p_statement_expr(self, p):
         'statement : expression'
-        p[0] = p[1]
+        p[0] = Statement(list(p[1]))
         print_debug("Expression {:s} to Statement {:s}".format(p[1], p[0]))
         # TODO: Set expression value to None when converting it to a statement.
 
     def p_statemenlist(self, p):
         "statement : statement SEMI statement"
+        p[0] = Statement(p[1].sl + p[3].sl)
+        return
         p[1].extend_instructions(p[3])
         p[0] = p[1]
         print_debug("join statements")
@@ -293,10 +301,14 @@ class HexagonBehaviorParser(Parser):
 
     def p_statement_statementassign(self, p):
         '''statement : statement_assign'''
-        p[0] = p[1]
+        p[0] = Statement([p[1]])
 
     def p_expression_register(self, p):
         "expression : register"
+        p[0] = p[1]
+
+    def p_expression_register_accesor(self, p):
+        "expression : register LBRACKET CONS RBRACKET"
         p[0] = p[1]
 
     def p_register_reg(self, p):
@@ -376,6 +388,25 @@ class HexagonBehaviorParser(Parser):
         p[0] = p[1]
         inst = "binop {:s} {:s} {:s}".format(p[1].get_value(), p[2], p[3].get_value())
         print_debug(inst)
+
+    def p_statement_if(self, p):
+        "statement : IF LPAREN expression RPAREN LBRACE statement RBRACE"
+        p[0] = IfConditional(p[3], p[6])
+        return
+        p[0] = p[3]
+        p[0].add(p[0]._builder.gen_nop())
+        p[0].extend_instructions(p[6])
+        inst = "IF-ONLY, eval {:s}".format(p[3].get_value())
+        debug_parse(inst)
+
+    # def p_statement_if_else(self, p):
+    #     "statement : IF LPAREN expression RPAREN LBRACE statement RBRACE ELSE LBRACE statement RBRACE"
+    #     p[0] = p[3]
+    #     p[0].add(p[0]._builder.gen_nop())
+    #     p[0].extend_instructions(p[6])
+    #     p[0].extend_instructions(p[10])
+    #     inst = "IF-ELSE, eval {:s}".format(p[3].get_value())
+    #     debug_parse(inst)
 
     def p_expression_group(self, p):
         "expression : LPAREN expression RPAREN"
@@ -507,18 +538,21 @@ if __name__ == "__main__":
         behavior = inst.behavior
 
         # TODO: Temporal hack to parse particular behaviors
-        if "Rd=Rs+Rt;" not in inst.behavior: continue
+        if "if(Pt[0]){EA=Rx;Rx=Rx+#s;" not in behavior:
+            continue
+        else:
+            behavior = behavior + '}'
 
-        if inst.behavior == '':
+        if behavior == '':
             # No behavior available (probably it wasn't correctly parsed
             # from the Hexagon Reference Manual).
             continue
 
         try:
-            print_debug("Parsing: {:s}".format(inst.behavior.strip()))
+            log.info("Parsing: {:s}".format(behavior.strip()))
             parsed = parser.parse_and_translate(behavior)
             print(parsed)
-            print_debug("DONE!")
+            print("DONE!")
         except UnknownBehaviorException as e:
-            log.info("Unknown behavior instruction: {:s}".format(behavior))
+            log.error("Unknown behavior instruction: {:s} \n\tCause: {:s}".format(behavior,e ))
             pass
