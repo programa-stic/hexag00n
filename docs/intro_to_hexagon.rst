@@ -1,7 +1,7 @@
 Introduction to Hexagon
 =======================
 
-This is a short introduction to the `Qualcomm Hexagon`_  (QDSP6) architecture. It is not a self-contained guide, it is just a complement to the main reference, the "Hexagon V5/V55 Programmer’s Reference Manual" (80-N2040-8 Rev. A, August 29, 2013), that can be obtained from the `Hexagon SDK`_. The main objective of this document is to highlight the key ideas and terminology used through out this repository.
+This is a short introduction to the `Qualcomm Hexagon`_  (QDSP6) architecture. It is not a self-contained guide, it is just a complement to the main reference, the "Hexagon V5/V55 Programmer’s Reference Manual" (80-N2040-8 Rev. A, August 29, 2013), that can be obtained from the `Hexagon SDK`_. The main objective of this document is to highlight the key ideas and terminology used throughout this repository.
 
 .. _Qualcomm Hexagon: https://en.wikipedia.org/wiki/Qualcomm_Hexagon
 
